@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Steal-a-Ava — Profile</title>
+<style>
+:root{
+--hot-pink: #ff2d8f;
+--bright-blue: #00b0ff;
+--muted: #cfcfcf;
+--podium-wood: #b07a3b;
+--podium-shadow: #8a5a2e;
+--text-shadow: 0 2px 0 rgba(0,0,0,0.12);
+font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+html,body{height:100%;margin:0}
+body{
+background: linear-gradient(180deg,var(--hot-pink),#ff80bf);
+color: white;
+display:flex;align-items:center;justify-content:center;flex-direction:column;
+gap:24px;padding:36px;
+}
+
+
+header{display:flex;align-items:center;gap:18px}
+h1{
+color:var(--bright-blue);
+font-size: clamp(28px, 6vw, 72px);
+margin:0;padding:6px 12px;border-radius:12px;
+background: rgba(255,255,255,0.06);text-shadow:var(--text-shadow);
+letter-spacing:1px;font-weight:800;
+}
+
+
+.card{
+width:min(1100px,96%);
+background: rgba(255,255,255,0.06);
+border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,0.25);
+display:flex;gap:18px;align-items:center;justify-content:space-between;
+flex-wrap:wrap;
+}
+
+
+.left{flex:1;min-width:320px}
+.right{flex:1;min-width:340px;display:flex;align-items:center;justify-content:center}
+
+
+p.lead{color: #fff8; font-size:18px; margin:8px 0 0}
+
+
+/* podium area */
+.stage{width:100%;height:420px;display:flex;align-items:flex-end;justify-content:center}
+
+
+/* responsive svg container */
+.svg-wrap{width:100%;max-width:720px}
+
+
+footer{opacity:0.9;font-size:13px}
+
+
+/* small helper */
+.btn{background:var(--bright-blue);color:#002;font-weight:700;padding:10px 14px;border-radius:12px;text-decoration:none}
+
+
+@media (max-width:720px){
+.card{padding:12px}
+.stage{height:320px}
+}
+</style>
+</head>
+<body>
+<header>
+<h1>Steal-a-Ava</h1>
+</header>
+
+
+<div class="card">
+<div class="left">
+<h2 style="margin:0;color:var(--bright-blue)">Ava — Profile</h2>
+<p class="lead">Tan, athletic, blonde, blue-eyed — a confident champion standing tall. Pearl ear piercings, favorite number 67 on her shirt, and a playful blue baseball-style short patterned with tiny ice cream icons.</p>
+
+
+<p style="margin-top:14px">This is a playful personal profile page. The illustration at right is an SVG scene showing Ava on a first-place podium with three other less-emphasized versions behind her.</p>
+
+
+<a class="btn" href="#stage">Jump to the podium</a>
+</div>
+
+
+<div class="right">
+<div id="stage" class="svg-wrap">
+<!-- SVG stylized scene -->
+<svg viewBox="0 0 900 420" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A stylized podium scene with Ava in first place">
+
+
+<!-- background subtle rays -->
+<defs>
+<linearGradient id="bgRay" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#ffffff" stop-opacity="0.06"/>
