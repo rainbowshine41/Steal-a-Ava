@@ -1,12 +1,41 @@
-# Writing updated prototype files with requested changes and zipping them for download.
-project_files = {
-"index.html": """<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Steal-a-Ava — Roblox-style Prototype v3</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Steal-a-Ava — Roblox-style Prototype v2</title>
+  <style>
+    :root{
+      --hot-pink:#ff2d8f; --bright-blue:#00b0ff; --bg-grad:linear-gradient(180deg,var(--hot-pink),#ff80bf);
+      font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:var(--bg-grad);color:#fff}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px}
+    .profile{display:flex;align-items:center;gap:10px}
+    .avatar{width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#ffe0b2,#ffd6f0);display:flex;align-items:center;justify-content:center;font-weight:900;color:#303}
+    h1{margin:0;color:var(--bright-blue);font-size:20px}
+    .search{flex:1;max-width:560px;margin:0 18px}
+    .search input{width:100%;padding:10px;border-radius:12px;border:0;font-size:15px}
+    .btn{background:var(--bright-blue);color:#002;padding:8px 12px;border-radius:10px;border:0;font-weight:800}
+    .container{display:flex;gap:18px;padding:18px}
+    .sidebar{width:320px}
+    .card{background:rgba(255,255,255,0.06);padding:12px;border-radius:12px}
+    .servers{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .server{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02)}
+    .main{flex:1}
+    .arena{display:grid;grid-template-columns:1fr 360px 1fr;gap:12px}
+    .base{background:rgba(0,0,0,0.18);padding:8px;border-radius:10px}
+    .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+    .slot{height:72px;background:rgba(255,255,255,0.04);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px}
+    .track{background:linear-gradient(180deg,rgba(0,0,0,0.08),transparent);border-radius:12px;height:420px;position:relative;display:flex;align-items:flex-start;justify-content:center}
+    .lane{position:absolute;left:50%;transform:translateX(-50%);width:14px;height:100%;background:rgba(255,255,255,0.06);border-radius:8px}
+    .ava-piece{position:absolute;width:86px;height:86px;border-radius:12px;background:#ffd7b3;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;cursor:pointer}
+    .controls{display:flex;gap:8px;margin-top:10px}
+    .shop .item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,0.03);margin-bottom:6px}
+    .log{max-height:180px;overflow:auto;padding:8px;background:rgba(0,0,0,0.06);border-radius:8px;margin-top:10px}
+    .bottom-left{position:fixed;left:20px;bottom:20px}
+  </style>
 </head>
 <body>
   <div class="topbar">
@@ -67,10 +96,9 @@ project_files = {
 
               <div class="controls">
                 <button id="lockBase" class="btn">Lock My Base (60s)</button>
-                <button id="stealFromBtn" class="btn">Steal From Other Base</button>
                 <button id="buyBat" class="btn">Buy Baseball Bat ($5,000,000)</button>
                 <div style="flex:1"></div>
-                <div>Auto-spawn: every 2s • Despawn if not claimed at end</div>
+                <div>Auto-spawn: every 3s • Despawn if not claimed at end</div>
               </div>
             </div>
 
@@ -86,268 +114,181 @@ project_files = {
     </main>
   </div>
 
-  <div class="bottom-left" id="bottomLeftArea">
-    <!-- baseball bat item will show here too -->
+  <div class="bottom-left">
+    <!-- placeholder for extra action buttons -->
   </div>
 
-  <script src="game.js"></script>
+  <script>
+    // --- Config ---
+    const rarities = [
+      {id:'common',label:'Common',valuePerSecRange:[1,1],buyRange:[50,50]},
+      {id:'rare',label:'Rare',valuePerSecRange:[250,400],buyRange:[300,800]},
+      {id:'epic',label:'Epic',valuePerSecRange:[500,1000],buyRange:[1000,10000]},
+      {id:'legendary',label:'Legendary',valuePerSecRange:[1500,5500],buyRange:[30000,100000]},
+      {id:'mythic',label:'Mythic',valuePerSecRange:[6000,20000],buyRange:[150000,200000]},
+      {id:'avagod',label:'Ava God',valuePerSecRange:[25000,50000],buyRange:[300000,5000000]},
+      {id:'secret',label:'Secret',valuePerSecRange:[550000,1500000],buyRange:[10000000,85000000]}
+    ];
+
+    function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+    function randFrom(arr){return arr[Math.floor(Math.random()*arr.length)]}
+
+    // --- Data ---
+    let servers = [];
+    let serverIdCounter = 1;
+    let currentServer = null;
+    let player = {name:'You',money:0,baseIndex:0,hasBat:false};
+
+    function createServer(name){
+      const s={id:serverIdCounter++,name:name||`Steal-a-Ava #${serverIdCounter}`,bases:[],aInstances:[],log:[]};
+      for(let i=0;i<4;i++) s.bases.push({id:i,owner:`Player${i+1}`,slots:Array(8).fill(null),locked:false,lockExpires:0});
+      servers.push(s);return s;
+    }
+
+    // create initial servers
+    for(let i=0;i<3;i++) createServer(`Steal-a-Ava Server ${i+1}`);
+
+    // UI refs
+    const serversList=document.getElementById('serversList');
+    const gameTitle=document.getElementById('gameTitle');
+    const gameView=document.getElementById('gameView');
+    const leftBasesEl=document.getElementById('leftBases');
+    const rightBasesEl=document.getElementById('rightBases');
+    const trackArea=document.getElementById('trackArea');
+    const logEl=document.getElementById('log');
+    const moneyEl=document.getElementById('money');
+    const shopArea=document.getElementById('shopArea');
+
+    function renderServers(){
+      serversList.innerHTML='';
+      servers.forEach(s=>{
+        const div=document.createElement('div');div.className='server';div.innerHTML=`<div><strong>${s.name}</strong><div style='font-size:12px;opacity:0.9'>${s.aInstances.length} Avas active</div></div><div><button class='btn'>Join</button></div>`;
+        div.querySelector('button').addEventListener('click',()=>joinServer(s.id));serversList.appendChild(div);
+      });
+    }
+
+    function log(s,text){
+      const t=`[${new Date().toLocaleTimeString()}] ${text}`;s.log.unshift(t);if(s.log.length>200) s.log.pop();if(currentServer&&currentServer.id===s.id) renderLog();
+    }
+
+    function renderLog(){logEl.innerHTML=currentServer.log.map(l=>`<div>${l}</div>`).join('');}
+
+    function joinServer(id){currentServer=servers.find(x=>x.id===id);gameTitle.textContent=`${currentServer.name} — Joined`;gameView.style.display='block';renderServerView();log(currentServer,`${player.name} joined.`);}
+
+    function renderServerView(){
+      leftBasesEl.innerHTML=''; rightBasesEl.innerHTML='';
+      // left two bases
+      for(let i=0;i<2;i++) leftBasesEl.appendChild(renderBase(currentServer.bases[i]));
+      for(let i=2;i<4;i++) rightBasesEl.appendChild(renderBase(currentServer.bases[i]));
+      // clear track pieces
+      Array.from(trackArea.querySelectorAll('.ava-piece')).forEach(n=>n.remove());
+      // render instances
+      currentServer.aInstances.forEach(inst=>renderAvaPiece(inst));
+      updateMoney();
+    }
+
+    function renderBase(base){
+      const box=document.createElement('div');box.className='card';
+      const title=document.createElement('div');title.style.fontWeight='800';title.textContent=`${base.owner} (Base ${base.id+1})`;
+      const lockText=document.createElement('div');lockText.style.fontSize='12px';lockText.style.opacity='0.9';
+      function updateLock(){ if(base.locked){ const s=Math.max(0,Math.ceil((base.lockExpires-Date.now())/1000)); lockText.textContent=`Locked — ${s}s`}else lockText.textContent='Unlocked' }
+      updateLock();
+      const slotsWrap=document.createElement('div');slotsWrap.className='slots';
+      base.slots.forEach((s,i)=>{
+        const slot=document.createElement('div');slot.className='slot';
+        if(s){ slot.innerHTML=`<div style='font-weight:800'>${s.name}</div><div style='font-size:11px;opacity:0.9'>${s.rarity}</div><div style='margin-top:6px;font-size:12px'>$<span>${Math.floor(s.accrued||0)}</span></div>`;
+          const claimBtn=document.createElement('button');claimBtn.textContent='Claim $';claimBtn.style.fontSize='12px';claimBtn.addEventListener('click',()=>{ const amt=Math.floor(s.accrued||0); player.money+=amt; s.accrued=0; updateMoney(); renderServerView(); log(currentServer,`${player.name} claimed $${amt} from ${s.name}`); }); slot.appendChild(claimBtn);
+          const stealBtn=document.createElement('button');stealBtn.textContent='Steal';stealBtn.style.fontSize='12px';stealBtn.addEventListener('click',()=>stealFromSlot(base,i)); slot.appendChild(stealBtn);
+        } else { slot.textContent='Empty' }
+        slotsWrap.appendChild(slot);
+      });
+      const controls=document.createElement('div');controls.style.marginTop='8px';
+      const claimAll=document.createElement('button');claimAll.className='btn';claimAll.textContent='Claim All';claimAll.addEventListener('click',()=>{ let total=0; base.slots.forEach(s=>{ if(s){ total+=Math.floor(s.accrued||0); s.accrued=0; }}); player.money+=total; updateMoney(); renderServerView(); log(currentServer,`${player.name} claimed $${total} from base ${base.id+1}`); });
+      const lockBtn=document.createElement('button');lockBtn.className='btn';lockBtn.textContent='Lock (60s)';lockBtn.addEventListener('click',()=>{ if(base.owner!==player.name){ alert('You can only lock your own base in this prototype (your base is Base 1).'); return; } if(base.locked){ alert('Already locked'); return; } base.locked=true;base.lockExpires=Date.now()+60000; updateLock(); log(currentServer,`${player.name} locked base ${base.id+1} for 60s`); });
+      controls.appendChild(claimAll); controls.appendChild(lockBtn);
+      box.appendChild(title); box.appendChild(lockText); box.appendChild(slotsWrap); box.appendChild(controls);
+      // countdown
+      setInterval(()=>{ if(base.locked && Date.now()>base.lockExpires){ base.locked=false; renderServerView(); log(currentServer,`${base.owner}'s base unlocked`);} updateLock(); },1000);
+      return box;
+    }
+
+    // spawn Avas automatically every 3s
+    let avaCounter=0;
+    function spawnAutoAva(){ if(!currentServer) return; const name=generateAvaName(avaCounter++); const rarityKey=weightedRarity(); const r=rarities.find(x=>x.id===rarityKey); const valuePerSec=randInt(r.valuePerSecRange[0],r.valuePerSecRange[1]); const inst={id:'ava-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),name,rarity:r.label,rarityKey,valuePerSec,position:0,claimedBy:null,accrued:0,side:Math.random()>0.5?'left':'right'}; currentServer.aInstances.push(inst); renderAvaPiece(inst); log(currentServer,`Spawned ${inst.name} (${inst.rarity}) $${formatNum(inst.valuePerSec)}/s on ${inst.side}`); }
+
+    function weightedRarity(){ const pool=[].concat(Array(45).fill('common'),Array(25).fill('rare'),Array(15).fill('epic'),Array(8).fill('legendary'),Array(5).fill('mythic'),Array(1).fill('avagod'),Array(1).fill('secret')); return randFrom(pool); }
+
+    function generateAvaName(i){ const silly=['Bubucaca','Spronk','Gigglepuff','Zelava','Crunchy','Fizzle','TacoAva','Bubblegum','Sparkle','Noodle','Zebra','Flipflop','DingDong','Poptart','Muffin']; return `Ava ${silly[i% silly.length]}${i>0?i:''}` }
+
+    function renderAvaPiece(inst){ let el=document.getElementById(inst.id); if(!el){ el=document.createElement('div'); el.className='ava-piece'; el.id=inst.id; el.innerHTML=`<div style='font-size:13px'>${inst.name}</div><div style='font-size:11px;opacity:0.9'>${inst.rarity}</div><div style='font-size:11px;margin-top:6px'>$${formatNum(inst.valuePerSec)}/s</div>`; trackArea.appendChild(el); el.addEventListener('click',()=>claimAva(inst)); }
+      // compute position along track
+      const trackRect=trackArea.getBoundingClientRect(); const totalH=trackRect.height-120; const y=20 + (inst.position/100)*totalH; const sideOffset=inst.side==='left' ? -140 : 140; const x=(trackRect.width/2 - 43) + sideOffset*Math.cos((inst.position/100)*Math.PI/2);
+      el.style.transform=`translate(${x}px, ${y}px)`;
+    }
+
+    // movement loop
+    setInterval(()=>{
+      if(!currentServer) return;
+      currentServer.aInstances.slice().forEach(inst=>{
+        if(!inst.claimedBy){ inst.position += 3 + Math.random()*2; if(inst.position>=100){ // despawn
+            currentServer.aInstances = currentServer.aInstances.filter(i=>i.id!==inst.id); const el=document.getElementById(inst.id); if(el) el.remove(); log(currentServer,`${inst.name} despawned (not claimed)`); return; }
+        } else { // being carried - no automatic accrual until placed
+          inst.position = Math.min(100,inst.position + 6);
+        }
+        renderAvaPiece(inst);
+      });
+    },120);
+
+    // per-second accrual for placed avas
+    setInterval(()=>{
+      if(!currentServer) return;
+      currentServer.bases.forEach(base=>{
+        base.slots.forEach(s=>{ if(s){ s.accrued = (s.accrued||0) + s.valuePerSec; }});
+      });
+      updateMoney(); renderServerView();
+    },1000);
+
+    function claimAva(inst){ if(inst.claimedBy){ alert('Already claimed'); return; } inst.claimedBy = player.name; log(currentServer,`${player.name} claimed ${inst.name}, carrying to base.`); // simulate travel
+      setTimeout(()=>{ // place into player's base if space
+        const base=currentServer.bases[player.baseIndex]; const idx=base.slots.findIndex(s=>!s); if(idx===-1){ // drop
+          currentServer.aInstances=currentServer.aInstances.filter(i=>i.id!==inst.id); const el=document.getElementById(inst.id); if(el) el.remove(); log(currentServer,`${player.name} couldn't place ${inst.name} — base full. Dropped.`); renderServerView(); return; }
+        base.slots[idx] = {name:inst.name,rarity:inst.rarity,rarityKey:inst.rarityKey,valuePerSec:inst.valuePerSec,accrued:0}; currentServer.aInstances=currentServer.aInstances.filter(i=>i.id!==inst.id); const el=document.getElementById(inst.id); if(el) el.remove(); log(currentServer,`${player.name} placed ${inst.name} into their base slot ${idx+1}.`); renderServerView(); }, 900 + Math.random()*700);
+    }
+
+    // stealing from slot: players can steal anytime (no restriction)
+    function stealFromSlot(base,slotIndex){ if(!currentServer) return; if(!base.slots[slotIndex]) return alert('No Ava to steal'); // if target locked only prevents certain interactions? user said can steal anytime — so ignore lock for stealing
+      const s = base.slots[slotIndex]; base.slots[slotIndex]=null; // create carried instance
+      const inst = {id:'stolen-'+Date.now(),name:s.name,rarity:s.rarity,rarityKey:s.rarityKey,valuePerSec:s.valuePerSec,position:0,claimedBy:player.name,accrued:0,side:'left'}; currentServer.aInstances.push(inst); renderAvaPiece(inst); log(currentServer,`${player.name} stole ${s.name} from ${base.owner}`);
+      setTimeout(()=>{ const myBase=currentServer.bases[player.baseIndex]; const empty=myBase.slots.findIndex(x=>!x); if(empty===-1){ currentServer.aInstances=currentServer.aInstances.filter(i=>i.id!==inst.id); log(currentServer,`${player.name} had no room, dropped ${inst.name}`); renderServerView(); return; } myBase.slots[empty]={name:inst.name,rarity:inst.rarity,rarityKey:inst.rarityKey,valuePerSec:inst.valuePerSec,accrued:0}; currentServer.aInstances=currentServer.aInstances.filter(i=>i.id!==inst.id); log(currentServer,`${player.name} placed stolen ${inst.name} into their base.`); renderServerView(); },1000+Math.random()*1000);
+    }
+
+    function updateMoney(){ moneyEl.textContent = Math.floor(player.money).toLocaleString(); }
+
+    function formatNum(n){ return n.toLocaleString(); }
+
+    // Shop: buy Avas with cost ranges
+    function renderShop(){ shopArea.innerHTML=''; rarities.forEach(r=>{ const costMin=r.buyRange[0], costMax=r.buyRange[1]; const priceText = costMin===costMax?`$${formatNum(costMin)}`:`$${formatNum(costMin)} - $${formatNum(costMax)}`; const div=document.createElement('div'); div.className='item'; div.innerHTML=`<div><strong>${r.label}</strong><div style='font-size:12px;opacity:0.9'>Value/s: ${r.valuePerSecRange[0]} - ${r.valuePerSecRange[1]} /s</div></div><div><div style='font-size:12px;opacity:0.95'>${priceText}</div><button class='btn'>Buy</button></div>`; div.querySelector('button').addEventListener('click',()=>buyAva(r)); shopArea.appendChild(div); }); }
+
+    function buyAva(r){ const price = randInt(r.buyRange[0], r.buyRange[1]); if(player.money < price){ alert('Not enough money'); return; } player.money -= price; const name = generateAvaName(Math.floor(Math.random()*1000)); const valuePerSec = randInt(r.valuePerSecRange[0], r.valuePerSecRange[1]); const base = currentServer.bases[player.baseIndex]; const slotIdx = base.slots.findIndex(s=>!s); if(slotIdx===-1){ alert('Your base is full'); player.money += price; return; } base.slots[slotIdx] = {name,rarity:r.label,rarityKey:r.id,valuePerSec,accrued:0}; log(currentServer,`${player.name} bought ${name} (${r.label}) for $${formatNum(price)} and placed into slot ${slotIdx+1}`); renderServerView(); updateMoney(); }
+
+    // buy baseball bat
+    document.getElementById('buyBat').addEventListener('click',()=>{
+      const cost = 5000000; if(player.hasBat){ alert('You already have a bat'); return; } if(player.money < cost){ alert('Not enough money'); return; } player.money -= cost; player.hasBat = true; updateMoney(); log(currentServer,`${player.name} bought a Baseball Bat.`); alert('You bought the Baseball Bat — in this prototype hitting a player will make them drop a held Ava when they are caught in the act (simulated by using the Steal button).'); });
+
+    // create servers
+    document.getElementById('createServer').addEventListener('click',()=>{ const s=createServer(`Steal-a-Ava Server ${servers.length+1}`); renderServers(); log(s,'Server created'); });
+
+    // lock base button
+    document.getElementById('lockBase').addEventListener('click',()=>{ if(!currentServer) return alert('Join a server first'); const base=currentServer.bases[player.baseIndex]; if(base.locked) return alert('Already locked'); base.locked=true; base.lockExpires=Date.now()+60000; log(currentServer,`${player.name} locked their base for 60s`); renderServerView(); });
+
+    // init
+    renderServers(); renderShop(); updateMoney();
+
+    // auto spawn every 3s
+    setInterval(()=>{ if(currentServer) spawnAutoAva(); },3000);
+
+    // expose
+    window.__SERVERS__ = servers;
+  </script>
 </body>
 </html>
-""",
-"style.css": """:root{
-  --hot-pink:#ff2d8f; --bright-blue:#00b0ff; --bg-grad:linear-gradient(180deg,var(--hot-pink),#ff80bf);
-  font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;
-}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:var(--bg-grad);color:#fff}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px}
-.profile{display:flex;align-items:center;gap:10px}
-.avatar{width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#ffe0b2,#ffd6f0);display:flex;align-items:center;justify-content:center;font-weight:900;color:#303}
-h1{margin:0;color:var(--bright-blue);font-size:20px}
-.search{flex:1;max-width:560px;margin:0 18px}
-.search input{width:100%;padding:10px;border-radius:12px;border:0;font-size:15px}
-.btn{background:var(--bright-blue);color:#002;padding:8px 12px;border-radius:10px;border:0;font-weight:800;cursor:pointer}
-.container{display:flex;gap:18px;padding:18px}
-.sidebar{width:320px}
-.card{background:rgba(255,255,255,0.06);padding:12px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.12)}
-.servers{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-.server{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02)}
-.main{flex:1}
-.arena{display:grid;grid-template-columns:1fr 360px 1fr;gap:12px;align-items:start}
-.base{background:rgba(0,0,0,0.18);padding:12px;border-radius:10px}
-.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
-.slot{height:72px;background:rgba(255,255,255,0.04);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;padding:6px;text-align:center}
-.track{background:linear-gradient(180deg,rgba(0,0,0,0.05),transparent);border-radius:12px;height:420px;position:relative;display:flex;align-items:flex-start;justify-content:center;overflow:hidden}
-.lane{position:absolute;left:50%;transform:translateX(-50%);width:8px;height:100%;background:linear-gradient(180deg,#ffd6f0,#ffd6f0);border-radius:8px;opacity:0.35;box-shadow:0 0 20px rgba(0,0,0,0.06) inset}
-.ava-piece{position:absolute;width:86px;height:86px;border-radius:12px;background:#ffd7b3;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;cursor:pointer;transition:transform 0.18s linear}
-.controls{display:flex;gap:8px;margin-top:10px}
-.shop .item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,0.03);margin-bottom:6px}
-.log{max-height:180px;overflow:auto;padding:8px;background:rgba(0,0,0,0.06);border-radius:8px;margin-top:10px;font-size:13px}
-.bottom-left{position:fixed;left:20px;bottom:20px}
-.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);padding:18px;border-radius:10px;z-index:999;color:#fff;min-width:220px}
-.modal button{margin-top:8px}
-""",
-"game.js": """// --- Config ---
-// Rarity definitions: buy ranges and value-per-second ranges per user's spec.
-const rarities = [
-  {id:'common',label:'Common',valuePerSecRange:[1,1],buyRange:[50,50]},
-  {id:'rare',label:'Rare',valuePerSecRange:[250,400],buyRange:[300,800]},
-  {id:'epic',label:'Epic',valuePerSecRange:[500,1000],buyRange:[1000,10000]},
-  {id:'legendary',label:'Legendary',valuePerSecRange:[1500,5500],buyRange:[30000,100000]},
-  {id:'mythic',label:'Mythic',valuePerSecRange:[6000,20000],buyRange:[150000,200000]},
-  {id:'avagod',label:'Ava God',valuePerSecRange:[25000,50000],buyRange:[300000,5000000]},
-  {id:'secret',label:'Secret',valuePerSecRange:[550000,1500000],buyRange:[10000000,85000000]}
-];
-
-function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min}
-function randFrom(arr){return arr[Math.floor(Math.random()*arr.length)]}
-
-// --- Data ---
-let servers = [];
-let serverIdCounter = 1;
-let currentServer = null;
-let player = {name:'You',money:0,baseIndex:0,hasBat:false};
-
-function createServer(name){
-  const s={id:serverIdCounter++,name:name||`Steal-a-Ava #${serverIdCounter}`,bases:[],aInstances:[],log:[]};
-  for(let i=0;i<4;i++) s.bases.push({id:i,owner:`Player${i+1}`,slots:Array(8).fill(null),locked:false,lockExpires:0,intruders:[]});
-  servers.push(s);return s;
-}
-
-// create initial servers
-for(let i=0;i<3;i++) createServer(`Steal-a-Ava Server ${i+1}`);
-
-// UI refs
-const serversList=document.getElementById('serversList');
-const gameTitle=document.getElementById('gameTitle');
-const gameView=document.getElementById('gameView');
-const leftBasesEl=document.getElementById('leftBases');
-const rightBasesEl=document.getElementById('rightBases');
-const trackArea=document.getElementById('trackArea');
-const logEl=document.getElementById('log');
-const moneyEl=document.getElementById('money');
-const shopArea=document.getElementById('shopArea');
-const stealFromBtn = document.getElementById('stealFromBtn');
-
-function renderServers(){
-  serversList.innerHTML='';
-  servers.forEach(s=>{
-    const div=document.createElement('div');div.className='server';div.innerHTML=`<div><strong>${s.name}</strong><div style='font-size:12px;opacity:0.9'>${s.aInstances.length} Avas active</div></div><div><button class='btn'>Join</button></div>`;
-    div.querySelector('button').addEventListener('click',()=>joinServer(s.id));serversList.appendChild(div);
-  });
-}
-
-function log(s,text){
-  const t=`[${new Date().toLocaleTimeString()}] ${text}`;s.log.unshift(t);if(s.log.length>200) s.log.pop();if(currentServer&&currentServer.id===s.id) renderLog();
-}
-
-function renderLog(){logEl.innerHTML=currentServer.log.map(l=>`<div>${l}</div>`).join('');}
-
-function joinServer(id){currentServer=servers.find(x=>x.id===id);gameTitle.textContent=`${currentServer.name} — Joined`;gameView.style.display='block';renderServerView();log(currentServer,`${player.name} joined.`);}
-
-function renderServerView(){
-  leftBasesEl.innerHTML=''; rightBasesEl.innerHTML='';
-  for(let i=0;i<2;i++) leftBasesEl.appendChild(renderBase(currentServer.bases[i]));
-  for(let i=2;i<4;i++) rightBasesEl.appendChild(renderBase(currentServer.bases[i]));
-  Array.from(trackArea.querySelectorAll('.ava-piece')).forEach(n=>n.remove());
-  currentServer.aInstances.forEach(inst=>renderAvaPiece(inst));
-  updateMoney();
-}
-
-function renderBase(base){
-  const box=document.createElement('div');box.className='card';
-  const title=document.createElement('div');title.style.fontWeight='800';title.textContent=`${base.owner} (Base ${base.id+1})`;
-  const lockText=document.createElement('div');lockText.style.fontSize='12px';lockText.style.opacity='0.9';
-  function updateLock(){ if(base.locked){ const s=Math.max(0,Math.ceil((base.lockExpires-Date.now())/1000)); lockText.textContent=`Locked — ${s}s`}else lockText.textContent='Unlocked' }
-  updateLock();
-  const slotsWrap=document.createElement('div');slotsWrap.className='slots';
-  base.slots.forEach((s,i)=>{
-    const slot=document.createElement('div');slot.className='slot';
-    if(s){ slot.innerHTML=`<div style='font-weight:800'>${s.name}</div><div style='font-size:11px;opacity:0.9'>${s.rarity}</div><div style='margin-top:6px;font-size:12px'>$<span>${Math.floor(s.accrued||0)}</span></div>`;
-      const claimBtn=document.createElement('button');claimBtn.textContent='Claim $';claimBtn.style.fontSize='12px';claimBtn.addEventListener('click',()=>{ const amt=Math.floor(s.accrued||0); player.money+=amt; s.accrued=0; updateMoney(); renderServerView(); log(currentServer,`${player.name} claimed $${amt} from ${s.name}`); }); slot.appendChild(claimBtn);
-      const stealBtn=document.createElement('button');stealBtn.textContent='Steal';stealBtn.style.fontSize='12px';stealBtn.addEventListener('click',()=>stealFromSlot(base,i)); slot.appendChild(stealBtn);
-    } else { slot.textContent='Empty' }
-    slotsWrap.appendChild(slot);
-  });
-  const controls=document.createElement('div');controls.style.marginTop='8px';
-  const claimAll=document.createElement('button');claimAll.className='btn';claimAll.textContent='Claim All';claimAll.addEventListener('click',()=>{ let total=0; base.slots.forEach(s=>{ if(s){ total+=Math.floor(s.accrued||0); s.accrued=0; }}); player.money+=total; updateMoney(); renderServerView(); log(currentServer,`${player.name} claimed $${total} from base ${base.id+1}`); });
-  const lockBtn=document.createElement('button');lockBtn.className='btn';lockBtn.textContent='Lock (60s)';lockBtn.addEventListener('click',()=>{ if(base.owner!==player.name){ alert('You can only lock your own base in this prototype (your base is Base 1).'); return; } if(base.locked){ alert('Already locked'); return; } base.locked=true;base.lockExpires=Date.now()+60000; updateLock(); log(currentServer,`${player.name} locked base ${base.id+1} for 60s`); });
-  controls.appendChild(claimAll); controls.appendChild(lockBtn);
-  box.appendChild(title); box.appendChild(lockText); box.appendChild(slotsWrap); box.appendChild(controls);
-  setInterval(()=>{ if(base.locked && Date.now()>base.lockExpires){ base.locked=false; renderServerView(); log(currentServer,`${base.owner}'s base unlocked`);} updateLock(); },1000);
-  return box;
-}
-
-// spawn Avas automatically every 2s, aligned to the center lane
-let avaCounter=0;
-function spawnAutoAva(){ if(!currentServer) return; const name=generateAvaName(avaCounter++); const rarityKey=weightedRarity(); const r=rarities.find(x=>x.id===rarityKey); const valuePerSec=randInt(r.valuePerSecRange[0],r.valuePerSecRange[1]); const inst={id:'ava-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),name,rarity:r.label,rarityKey,valuePerSec,position:0,claimedBy:null,accrued:0}; currentServer.aInstances.push(inst); renderAvaPiece(inst); log(currentServer,`Spawned ${inst.name} (${inst.rarity}) $${formatNum(inst.valuePerSec)}/s`); }
-
-function weightedRarity(){ const pool=[].concat(Array(45).fill('common'),Array(25).fill('rare'),Array(15).fill('epic'),Array(8).fill('legendary'),Array(5).fill('mythic'),Array(1).fill('avagod'),Array(1).fill('secret')); return randFrom(pool); }
-
-function generateAvaName(i){ const silly=['Bubucaca','Spronk','Gigglepuff','Zelava','Crunchy','Fizzle','TacoAva','Bubblegum','Sparkle','Noodle','Zebra','Flipflop','DingDong','Poptart','Muffin']; return `Ava ${silly[i% silly.length]}${i>0?i:''}` }
-
-function renderAvaPiece(inst){ let el=document.getElementById(inst.id); if(!el){ el=document.createElement('div'); el.className='ava-piece'; el.id=inst.id; el.innerHTML=`<div style='font-size:13px'>${inst.name}</div><div style='font-size:11px;opacity:0.9'>${inst.rarity}</div><div style='font-size:11px;margin-top:6px'>$${formatNum(inst.valuePerSec)}/s</div>`; trackArea.appendChild(el); el.addEventListener('click',()=>claimAva(inst)); }
-  // compute position along center lane: x centered, y based on position
-  const trackRect=trackArea.getBoundingClientRect(); const totalH=trackRect.height-120; const y=20 + (inst.position/100)*totalH; const x=(trackRect.width/2 - 43); el.style.transform=`translate(${x}px, ${y}px)`;
-}
-
-// movement loop: move Avas straight down center; despawn at end if unclaimed
-setInterval(()=>{
-  if(!currentServer) return;
-  currentServer.aInstances.slice().forEach(inst=>{
-    if(!inst.claimedBy){ inst.position += 2 + Math.random()*1; if(inst.position>=100){ currentServer.aInstances = currentServer.aInstances.filter(i=>i.id!==inst.id); const el=document.getElementById(inst.id); if(el) el.remove(); log(currentServer,`${inst.name} despawned (not claimed)`); return; } } else { inst.position = Math.min(100,inst.position + 8); }
-    renderAvaPiece(inst);
-  });
-},120);
-
-// per-second accrual for placed avas
-setInterval(()=>{
-  if(!currentServer) return;
-  currentServer.bases.forEach(base=>{
-    base.slots.forEach(s=>{ if(s){ s.accrued = (s.accrued||0) + s.valuePerSec; }});
-  });
-  updateMoney(); renderServerView();
-},1000);
-
-function claimAva(inst){ if(inst.claimedBy){ alert('Already claimed'); return; } inst.claimedBy = player.name; log(currentServer,`${player.name} claimed ${inst.name}, carrying to base.`); setTimeout(()=>{ const base=currentServer.bases[player.baseIndex]; const idx=base.slots.findIndex(s=>!s); if(idx===-1){ currentServer.aInstances=currentServer.aInstances.filter(i=>i.id!==inst.id); const el=document.getElementById(inst.id); if(el) el.remove(); log(currentServer,`${player.name} couldn't place ${inst.name} — base full. Dropped.`); renderServerView(); return; } base.slots[idx] = {name:inst.name,rarity:inst.rarity,rarityKey:inst.rarityKey,valuePerSec:inst.valuePerSec,accrued:0}; currentServer.aInstances=currentServer.aInstances.filter(i=>i.id!==inst.id); const el=document.getElementById(inst.id); if(el) el.remove(); log(currentServer,`${player.name} placed ${inst.name} into their base slot ${idx+1}.`); renderServerView(); }, 800 + Math.random()*600); }
-
-// stealing from slot: players can steal anytime; base choice popup
-function stealFromSlot(base,slotIndex){ if(!currentServer) return; if(!base.slots[slotIndex]) return alert('No Ava to steal'); const s = base.slots[slotIndex]; base.slots[slotIndex]=null; const inst = {id:'stolen-'+Date.now(),name:s.name,rarity:s.rarity,rarityKey:s.rarityKey,valuePerSec:s.valuePerSec,position:0,claimedBy:player.name,accrued:0}; currentServer.aInstances.push(inst); renderAvaPiece(inst); log(currentServer,`${player.name} stole ${s.name} from ${base.owner}`); setTimeout(()=>{ const myBase=currentServer.bases[player.baseIndex]; const empty=myBase.slots.findIndex(x=>!x); if(empty===-1){ currentServer.aInstances=currentServer.aInstances.filter(i=>i.id!==inst.id); log(currentServer,`${player.name} had no room, dropped ${inst.name}`); renderServerView(); return; } myBase.slots[empty]={name:inst.name,rarity:inst.rarity,rarityKey:inst.rarityKey,valuePerSec:inst.valuePerSec,accrued:0}; currentServer.aInstances=currentServer.aInstances.filter(i=>i.id!==inst.id); log(currentServer,`${player.name} placed stolen ${inst.name} into their base.`); renderServerView(); },900+Math.random()*900); }
-
-// improved "Steal From Other Base" - shows a modal to pick which base
-stealFromBtn?.addEventListener('click',()=>{
-  if(!currentServer) return alert('Join a server first');
-  const modal = document.createElement('div'); modal.className='modal';
-  modal.innerHTML = '<div style=\"font-weight:800;margin-bottom:8px\">Choose a base to steal from</div>';
-  currentServer.bases.forEach((b,idx)=>{
-    const btn = document.createElement('button');
-    btn.textContent = `${b.owner} (Base ${b.id+1})`;
-    btn.className='btn';
-    btn.style.marginRight='6px';
-    btn.addEventListener('click',()=>{ document.body.removeChild(modal); // find first occupied slot\n      const occ = b.slots.findIndex(s=>s); if(occ===-1){ alert('That base has no Avas'); return; } stealFromSlot(b,occ); });
-    modal.appendChild(btn);
-  });
-  const cancel = document.createElement('button'); cancel.textContent='Cancel'; cancel.className='btn'; cancel.style.marginTop='8px'; cancel.addEventListener('click',()=>document.body.removeChild(modal));
-  modal.appendChild(cancel);
-  document.body.appendChild(modal);
-});
-
-function updateMoney(){ moneyEl.textContent = Math.floor(player.money).toLocaleString(); }
-
-function formatNum(n){ return n.toLocaleString(); }
-
-// Shop: buy Avas with custom cost ranges
-function renderShop(){ shopArea.innerHTML=''; rarities.forEach(r=>{ const costMin=r.buyRange[0], costMax=r.buyRange[1]; const priceText = costMin===costMax?`$${formatNum(costMin)}`:`$${formatNum(costMin)} - $${formatNum(costMax)}`; const div=document.createElement('div'); div.className='item'; div.innerHTML=`<div><strong>${r.label}</strong><div style='font-size:12px;opacity:0.9'>Value/s: ${r.valuePerSecRange[0]} - ${r.valuePerSecRange[1]} /s</div></div><div><div style='font-size:12px;opacity:0.95'>${priceText}</div><button class='btn'>Buy</button></div>`; div.querySelector('button').addEventListener('click',()=>buyAva(r)); shopArea.appendChild(div); }); // add bat button in shop area also
-  const batDiv=document.createElement('div'); batDiv.className='item'; batDiv.innerHTML=`<div><strong>Baseball Bat</strong><div style='font-size:12px;opacity:0.9'>Knock intruders out when used</div></div><div><div style='font-size:12px;opacity:0.95'>$5,000,000</div><button class='btn' id='buyBatShop'>Buy</button></div>`; shopArea.appendChild(batDiv); document.getElementById('buyBatShop').addEventListener('click',buyBatFromShop); }
-
-function buyAva(r){ if(!currentServer) return alert('Join a server first'); const price = randInt(r.buyRange[0], r.buyRange[1]); if(player.money < price){ alert('Not enough money'); return; } player.money -= price; const name = generateAvaName(Math.floor(Math.random()*1000)); const valuePerSec = randInt(r.valuePerSecRange[0], r.valuePerSecRange[1]); const base = currentServer.bases[player.baseIndex]; const slotIdx = base.slots.findIndex(s=>!s); if(slotIdx===-1){ alert('Your base is full'); player.money += price; return; } base.slots[slotIdx] = {name,rarity:r.label,rarityKey:r.id,valuePerSec,accrued:0}; log(currentServer,`${player.name} bought ${name} (${r.label}) for $${formatNum(price)} and placed into slot ${slotIdx+1}`); renderServerView(); updateMoney(); }
-
-function buyBatFromShop(){ const cost=5000000; if(player.hasBat) return alert('You already have a bat'); if(player.money < cost) return alert('Not enough money'); player.money -= cost; player.hasBat=true; updateMoney(); log(currentServer,`${player.name} bought a Baseball Bat (shop)`); alert('You bought the Baseball Bat. In this prototype hitting an intruder is simulated by using the Steal/Steal button while they carry an Ava to drop it.'); }
-
-// hook buy bat button at top also
-document.getElementById('buyBat')?.addEventListener('click',()=>{ buyBatFromShop(); });
-
-// create servers
-document.getElementById('createServer')?.addEventListener('click',()=>{ const s=createServer(`Steal-a-Ava Server ${servers.length+1}`); renderServers(); log(s,'Server created'); });
-
-// lock base button
-document.getElementById('lockBase')?.addEventListener('click',()=>{ if(!currentServer) return alert('Join a server first'); const base=currentServer.bases[player.baseIndex]; if(base.locked) return alert('Already locked'); base.locked=true; base.lockExpires=Date.now()+60000; log(currentServer,`${player.name} locked their base for 60s`); renderServerView(); });
-
-// init
-renderServers(); renderShop(); updateMoney();
-
-// auto spawn every 2s
-setInterval(()=>{ if(currentServer) spawnAutoAva(); },2000);
-
-// expose
-window.__SERVERS__ = servers;
-""",
-"README.md": """Steal-a-Ava — Browser Prototype (v3)
-======================================
-
-This repository contains an updated browser-based single-player prototype of a "Steal A Brainrot" style game called **Steal-a-Ava**.
-
-What's changed in v3
-- Avas auto-spawn every **2 seconds** and travel **straight down the center track**; if unclaimed they despawn at the end.
-- Removed manual spawn controls — spawning is automatic.
-- Improved "Steal From Other Base": clicking it opens a modal letting you choose which base to raid.
-- Added proper buy price ranges for all rarities and per-second income ranges per your spec.
-- Baseball Bat now available in shop for **$5,000,000**.
-- Locking your base is 60s and works as described in the prototype UI.
-- Prototype is still single-page, browser-only, and **not multiplayer** — the server list and player actions are simulated locally for testing.
-
-How to publish on GitHub Pages
-1. Create a new GitHub repository (e.g. `steal-a-ava-prototype-v3`).
-2. Copy the files from this project into the repository root.
-3. Commit & push.
-4. In the repository settings → Pages: choose the `main` branch and `/ (root)`, then save.
-5. Your site will appear at `https://YOURUSERNAME.github.io/steal-a-ava-prototype-v3/`.
-
-If you'd like, I can also:
-- Package this into a downloadable ZIP (I will create one now).  
-- Convert to React or add a Node.js demo server for multiplayer simulation.  
-- Prepare example Roblox Studio Lua starter files (server-authoritative) and a step-by-step guide.
-
-Tell me which next step you'd like.
-"""
-}
-
-# write files to /mnt/data and zip them
-import os, zipfile
-outdir = '/mnt/data/steal-a-ava-prototype-v3'
-os.makedirs(outdir, exist_ok=True)
-for name, content in project_files.items():
-    with open(os.path.join(outdir, name), 'w', encoding='utf-8') as f:
-        f.write(content)
-
-zip_path = '/mnt/data/steal-a-ava-prototype-v3.zip'
-with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-    for name in project_files:
-        zf.write(os.path.join(outdir, name), arcname=name)
-
-zip_path
-
-
-
-
-
